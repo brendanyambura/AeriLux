@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">My Task</string>
+    <string name="header_title">My Tasks</string>
+    <string name="tasks_remaining_default">0 Tasks Remaining</string>
+    <string name="quote_default">\"Stay focused and be productive!\"</string>
+    <string name="search_hint">Search tasks&#8230;</string>
+    <string name="empty_tasks">No tasks yet! Add one.</string>
+    <string name="add_task_title">Add New Task</string>
+    <string name="priority_label">Select Priority</string>
+    <string name="task_title_hint">Task Title</string>
+
+    <string-array name="priority_levels">
+        <item>High</item>
+        <item>Medium</item>
+        <item>Low</item>
+    </string-array>
+</resources>

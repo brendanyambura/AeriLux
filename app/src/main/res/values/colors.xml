@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Modern Palette -->
+    <color name="primary_purple">#6C63FF</color>
+    <color name="secondary_cyan">#00D2FF</color>
+    <color name="accent_pink">#FF6B6B</color>
+    <color name="accent_orange">#FF9F43</color>
+    <color name="accent_lime">#1DD1A1</color>
+
+    <color name="priority_high">#EE5253</color>
+    <color name="priority_medium">#FF9F43</color>
+    <color name="priority_low">#1DD1A1</color>
+
+    <color name="bg_gradient_start">#6C63FF</color>
+    <color name="bg_gradient_end">#00D2FF</color>
+
+    <color name="task_completed_text">#9E9E9E</color>
+    <color name="card_background">#FFFFFF</color>
+</resources>
