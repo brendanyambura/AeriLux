@@ -23,6 +23,7 @@ public class DataHelper {
                 jsonObject.put("title", task.getTitle());
                 jsonObject.put("priority", task.getPriority());
                 jsonObject.put("isCompleted", task.isCompleted());
+                jsonObject.put("reminderTime", task.getReminderTime());
                 jsonArray.put(jsonObject);
             } catch (JSONException e) {
                 e.printStackTrace();
@@ -44,7 +45,8 @@ public class DataHelper {
                             obj.getLong("id"),
                             obj.getString("title"),
                             obj.getString("priority"),
-                            obj.getBoolean("isCompleted")
+                            obj.getBoolean("isCompleted"),
+                            obj.optLong("reminderTime", 0)
                     ));
                 }
             } catch (JSONException e) {

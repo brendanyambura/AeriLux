@@ -1,6 +1,10 @@
 package com.example.mytask;
 
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -14,6 +18,8 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -21,15 +27,22 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.mytask.adapters.TaskAdapter;
 import com.example.mytask.models.Task;
 import com.example.mytask.utils.DataHelper;
+import com.example.mytask.utils.ReminderHelper;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.snackbar.Snackbar;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTaskListener {
 
+    private static final int PERMISSION_REQUEST_CODE = 101;
     private RecyclerView recyclerView;
     private TaskAdapter adapter;
     private List<Task> taskList;
@@ -40,6 +53,7 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
     private LinearLayout layoutEmpty;
     private EditText editSearch;
     private TextView textQuote;
+    private long selectedReminderTime = 0;
 
     private final String[] quotes = {
             "\"Stay focused and be productive!\"",
@@ -60,6 +74,15 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
         setupSearch();
         updateSummary();
         setRandomQuote();
+        checkPermissions();
+    }
+
+    private void checkPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, PERMISSION_REQUEST_CODE);
+            }
+        }
     }
 
     private void initViews() {
@@ -139,6 +162,8 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
         
         EditText editTitle = view.findViewById(R.id.edit_task_title);
         Spinner spinnerPriority = view.findViewById(R.id.spinner_priority);
+        MaterialButton btnReminder = view.findViewById(R.id.btn_set_reminder);
+        TextView textReminderDisplay = view.findViewById(R.id.text_reminder_display);
         
         if (taskToEdit != null) {
             editTitle.setText(taskToEdit.getTitle());
@@ -150,7 +175,16 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
                 }
             }
             spinnerPriority.setSelection(spinnerPosition);
+            selectedReminderTime = taskToEdit.getReminderTime();
+            if (selectedReminderTime > 0) {
+                textReminderDisplay.setVisibility(View.VISIBLE);
+                textReminderDisplay.setText("Reminder: " + new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(new Date(selectedReminderTime)));
+            }
+        } else {
+            selectedReminderTime = 0;
         }
+
+        btnReminder.setOnClickListener(v -> showDateTimePicker(textReminderDisplay));
 
         builder.setView(view)
                 .setPositiveButton(taskToEdit == null ? "Add" : "Update", (dialog, which) -> {
@@ -163,17 +197,38 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
                     }
 
                     if (taskToEdit == null) {
-                        Task newTask = new Task(System.currentTimeMillis(), title, priority, false);
+                        Task newTask = new Task(System.currentTimeMillis(), title, priority, false, selectedReminderTime);
                         taskList.add(newTask);
+                        ReminderHelper.scheduleReminder(this, newTask);
                     } else {
+                        ReminderHelper.cancelReminder(this, taskToEdit.getId());
                         taskToEdit.setTitle(title);
                         taskToEdit.setPriority(priority);
+                        taskToEdit.setReminderTime(selectedReminderTime);
+                        ReminderHelper.scheduleReminder(this, taskToEdit);
                     }
                     
                     saveAndRefresh();
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    private void showDateTimePicker(TextView display) {
+        final Calendar currentDate = Calendar.getInstance();
+        final Calendar date = Calendar.getInstance();
+        new DatePickerDialog(this, (view, year, month, dayOfMonth) -> {
+            date.set(year, month, dayOfMonth);
+            new TimePickerDialog(this, (view1, hourOfDay, minute) -> {
+                date.set(Calendar.HOUR_OF_DAY, hourOfDay);
+                date.set(Calendar.MINUTE, minute);
+                date.set(Calendar.SECOND, 0);
+                
+                selectedReminderTime = date.getTimeInMillis();
+                display.setVisibility(View.VISIBLE);
+                display.setText("Reminder: " + new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(date.getTime()));
+            }, currentDate.get(Calendar.HOUR_OF_DAY), currentDate.get(Calendar.MINUTE), false).show();
+        }, currentDate.get(Calendar.YEAR), currentDate.get(Calendar.MONTH), currentDate.get(Calendar.DATE)).show();
     }
 
     private void saveAndRefresh() {
@@ -220,6 +275,18 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
     }
 
     @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "Notifications enabled", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Notifications disabled", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    @Override
     public void onTaskClick(int position) {}
 
     @Override
@@ -232,12 +299,14 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
         Task deletedTask = filteredList.get(position);
         int originalIndex = taskList.indexOf(deletedTask);
         
+        ReminderHelper.cancelReminder(this, deletedTask.getId());
         taskList.remove(deletedTask);
         saveAndRefresh();
 
         Snackbar.make(recyclerView, "Task Deleted", Snackbar.LENGTH_LONG)
                 .setAction("Undo", v -> {
                     taskList.add(originalIndex, deletedTask);
+                    ReminderHelper.scheduleReminder(this, deletedTask);
                     saveAndRefresh();
                 }).show();
     }
@@ -246,6 +315,11 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
     public void onStatusChange(int position, boolean isCompleted) {
         Task task = filteredList.get(position);
         task.setCompleted(isCompleted);
+        if (isCompleted) {
+            ReminderHelper.cancelReminder(this, task.getId());
+        } else {
+            ReminderHelper.scheduleReminder(this, task);
+        }
         saveAndRefresh();
     }
 }

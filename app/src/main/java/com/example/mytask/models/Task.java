@@ -5,12 +5,18 @@ public class Task {
     private String priority;
     private boolean isCompleted;
     private long id;
+    private long reminderTime; // Time in milliseconds
 
     public Task(long id, String title, String priority, boolean isCompleted) {
+        this(id, title, priority, isCompleted, 0);
+    }
+
+    public Task(long id, String title, String priority, boolean isCompleted, long reminderTime) {
         this.id = id;
         this.title = title;
         this.priority = priority;
         this.isCompleted = isCompleted;
+        this.reminderTime = reminderTime;
     }
 
     public String getTitle() {
@@ -43,5 +49,13 @@ public class Task {
 
     public void setId(long id) {
         this.id = id;
+    }
+
+    public long getReminderTime() {
+        return reminderTime;
+    }
+
+    public void setReminderTime(long reminderTime) {
+        this.reminderTime = reminderTime;
     }
 }
